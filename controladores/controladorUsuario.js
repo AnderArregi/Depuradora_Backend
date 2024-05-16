@@ -19,6 +19,20 @@ const obtenerLogin = (req, res) => {
         }
     });
 };
+const obtenerUsuario = (req, res) =>{
+    const usuarioId = req.params.usuarioId;
+    const sql = `SELECT nombre FROM usuario WHERE id = '${usuarioId}'`//comillas en la variable usuario porque es varchar(1) y se necesitan poruq es string
+    connection.query(sql, [], (error, results) => {
+        
+        if (error) {
+            return res.status(500).send({ message: 'Error al consultar la base de datos', error });
+        }
+        return res.status(200).header('Content-Type', 'applicacion/json').send(JSON.stringify(results[0]));// para tema seguridad que el formato siempre sea json y se ve mejor en postman.
+            
+    })
+}
+
 module.exports = {
-    obtenerLogin
+    obtenerLogin,
+    obtenerUsuario
 }
