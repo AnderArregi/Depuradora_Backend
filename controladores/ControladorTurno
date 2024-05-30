@@ -1,0 +1,41 @@
+const connection = require('../config/bbdd')
+
+const obtenerTurnos = (req, res) => {
+    const ano = req.params.ano;
+    const mes = parseInt(req.params.mes, 10);
+    if(mes < 1 || mes > 12){
+        return res.status(400).send({ message: 'Error, mes invalido'});    
+    }
+    const sql = `SELECT DiaTurno, usuario FROM datos_turno WHERE DiaTurno LIKE '${ano}-${req.params.mes}%'`;
+    connection.query(sql, [], (error, results) => {
+        
+        if (error) {
+            return res.status(500).send({ message: 'Error al consultar la base de datos', error });
+        }
+        return res.status(200).header('Content-Type', 'applicacion/json').send(JSON.stringify(results));// para tema seguridad que el formato siempre sea json y se ve mejor en postman.
+            
+    })
+    
+};
+const obtenerTurnosDia = (req, res) => {
+    const ano = req.params.ano;
+    const mes = parseInt(req.params.mes, 10);
+    if(mes < 1 || mes > 12){
+        return res.status(400).send({ message: 'Error, mes invalido'});    
+    }
+    const sql = `SELECT DiaTurno, usuario  FROM datos_turno WHERE DiaTurno LIKE '${ano}-${req.params.mes}-${req.params.dia}%'`;
+    connection.query(sql, [], (error, results) => {
+        
+        if (error) {
+            return res.status(500).send({ message: 'Error al consultar la base de datos', error });
+        }
+        return res.status(200).header('Content-Type', 'applicacion/json').send(JSON.stringify(results));// para tema seguridad que el formato siempre sea json y se ve mejor en postman.
+            
+    })
+    
+};
+
+module.exports = {
+    obtenerTurnos,
+    obtenerTurnosDia
+}
