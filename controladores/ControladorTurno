@@ -34,8 +34,29 @@ const obtenerTurnosDia = (req, res) => {
     })
     
 };
+const obtenerTurnosDiaUsuario = (req, res) => {
+    const ano = req.params.ano;
+    const mes = parseInt(req.params.mes, 10);
+    if(mes < 1 || mes > 12){
+        return res.status(400).send({ message: 'Error, mes invalido'});    
+    }
+    const sql = `SELECT *   FROM datos_turno WHERE DiaTurno LIKE '${ano}-${req.params.mes}-${req.params.dia}%' AND usuario = "${req.params.usuarioId}"`;
+    connection.query(sql, [], (error, results) => {
+        
+        if (error) {
+            return res.status(500).send({ message: 'Error al consultar la base de datos', error });
+        }
+        //if(results.length === 0){
+           // return res.status(404)
+        //}
+        return res.status(200)
+            
+    })
+    
+};
 
 module.exports = {
     obtenerTurnos,
-    obtenerTurnosDia
+    obtenerTurnosDia,
+    obtenerTurnosDiaUsuario
 }
