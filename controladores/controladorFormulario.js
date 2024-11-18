@@ -1,4 +1,6 @@
 const connection = require('../config/bbdd')
+const jwt = require('jsonwebtoken');
+const { comprobarToken } = require('./autentificacion');
 
 // Función para ajustar valores numéricos, convertirá cadenas vacías en cero
 const ajustarValorNumerico = (valor) => {
@@ -14,6 +16,16 @@ const ajustarValorDecimal = (valor) => {
 
 
 const insertarFormulario = async (req, res) => {
+    
+    const token = req.headers['x-access-token'];
+    if (!token) {
+        return res.status(401).json({ auth: false, message: 'No token provided.' });
+    }
+    const tokenValido = await comprobarToken(token);
+    if(!tokenValido){
+        return res.status(401).send({ auth: false, message: 'Fallo al autentificar el Token' });     
+    }
+    
 
     const {
         diaTurno, usuario, m3TratadasTurno, horasTratadasTurno, horasTurno, prensadas,
@@ -59,6 +71,17 @@ const insertarFormulario = async (req, res) => {
 
 };
 const actualizarFormulario = async (req, res) => {
+
+    const token = req.headers['x-access-token'];
+    if (!token) {
+        return res.status(401).json({ auth: false, message: 'No token provided.' });
+    }
+    const tokenValido = await comprobarToken(token);
+    if(!tokenValido){
+        return res.status(401).send({ auth: false, message: 'Fallo al autentificar el Token' });     
+    }
+    
+
     const {
         diaTurno, usuario, m3TratadasTurno, horasTratadasTurno, horasTurno, prensadas,
         phSalida, clSalida, phDecantador, clDecantador, phOxidacion, phLaboratorio,
@@ -66,6 +89,7 @@ const actualizarFormulario = async (req, res) => {
         Prensada_SI, M3_Principio_Turno, M3_Final_Turno, M3_h, Recogida_Camion
 
     } = req.body;
+    console.log('da resultado', req)
     let tablaCamionVacia = false;
     const ultimoEstadoCamionSQL = `SELECT TotalCamion FROM camion  WHERE id=(SELECT MAX(id) FROM camion)`;
     let ultimoEstadoCamion = 0;
@@ -185,7 +209,19 @@ const obtenerJson =(datos)=>{
 
 }
 const obtenerFormulario = async (req, res) => {
+    const token = req.headers['x-access-token'];
+    if (!token) {
+        return res.status(401).json({ auth: false, message: 'No token provided.' });
+    }
+    const tokenValido = await comprobarToken(token);
+    if(!tokenValido){
+        return res.status(401).send({ auth: false, message: 'Fallo al autentificar el Token' });     
+    }
+    
+
     const { fecha, turno } = req.params;
+    console.log(fecha)
+    console.log(turno)
     const diaTurno = `${fecha} ${turno}`;
     const sql = `SELECT * FROM datos_turno WHERE diaTurno = ?`;
 
@@ -204,73 +240,39 @@ const obtenerFormulario = async (req, res) => {
         }
     });
 };
+// Función para borrar un formulario
+const borrarFormulario = async (req, res) => {
+    
+    const token = req.headers['x-access-token'];
+    if (!token) {
+        return res.status(401).json({ auth: false, message: 'No token provided.' });
+    }
+    const tokenValido = await comprobarToken(token);
+    if(!tokenValido){
+        return res.status(401).send({ auth: false, message: 'Fallo al autentificar el Token' });     
+    }
+    
 
+    const { diaTurno } = req.params; // Recibe el identificador del formulario a través de los parámetros de la URL
+    const sql = 'DELETE FROM Datos_Turno WHERE DiaTurno = ?';
 
-
+    connection.query(sql, [diaTurno], (error, results) => {
+        if (error) {
+            console.error('Error al borrar el formulario:', error);
+            return res.status(500).json({ message: 'Error al conectar con la base de datos', error: error.message });
+        }
+        if (results.affectedRows === 0) {
+            // No se encontró el registro con ese DiaTurno, o no se borró ningún registro
+            return res.status(404).json({ message: 'No se encontró el formulario con el identificador proporcionado para borrar' });
+        }
+        res.status(200).json({ message: 'Formulario borrado exitosamente' });
+    });
+};
 
 
 module.exports = {
     insertarFormulario,
     actualizarFormulario,
-    obtenerFormulario
+    obtenerFormulario,
+    borrarFormulario
 }
-
-
-
-/*try {
-       connection.connect((error)=> {
-           connection.beginTransaction((err) => {//para hacer transaccion por si hay un error
-               if (err) throw err;
-               const sql = `
-       INSERT INTO Datos_Turno
-       (DiaTurno, usuario, M3_Tratadas_Turno, Horas_Tratadas_Turno, Horas_Turno, Prensadas,
-       PH_Salida, CL_Salida, PH_Decantador, CL_Decantador, PH_Oxidacion, PH_Laboratorio,
-       Zinc, Hierro, Cobre, Horas_8h, Horas_10h, Horas_13h, Horas_15h, Horas_18h, Horas_21h,
-       Prensada_SI, M3_Principio_Turno, M3_Final_Turno, M3_h, Recogida_Camion)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-               connection.query(sql, [
-                   diaTurno, usuario, ajustarValorNumerico(m3TratadasTurno), ajustarValorNumerico(horasTratadasTurno), ajustarValorNumerico(horasTurno),
-                   ajustarValorDecimal(prensadas), ajustarValorDecimal(phSalida), ajustarValorDecimal(clSalida), ajustarValorDecimal(phDecantador), ajustarValorDecimal(clDecantador), ajustarValorDecimal(phOxidacion), ajustarValorDecimal(phLaboratorio),
-                   ajustarValorDecimal(zinc), ajustarValorDecimal(hierro), ajustarValorDecimal(cobre), Horas_8h, Horas_10h, Horas_13h, Horas_15h, Horas_18h, Horas_21h,
-                   Prensada_SI, ajustarValorNumerico(M3_Principio_Turno), ajustarValorNumerico(M3_Final_Turno), ajustarValorNumerico(M3_h), Recogida_Camion
-               ], (err, result) => {
-                   if (err) {
-                       return connection.rollback(() => {
-                           throw err;
-                       });
-                   }
-                   const NuevoEstadoCamion = ultimoEstadoCamion + prensadas;
-                   const sql2 = `INSERT INTO Camion (TotalCamion) VALUES (?)`;
-                   
-                   connection.query(sql2, [ajustarValorDecimal(NuevoEstadoCamion)], (err, result) => {
-                       if (err) {
-                           console.error('error al ejecutar sql2');
-                           return connection.rollback(() => {
-                               throw err;
-                           });
-                       }
-                       console.log('empezar commit')
-                       connection.commit((err) => {
-                           
-                           if (err) {
-                               return connection.rollback(() => {
-                                   throw err;
-                               });
-                           }
-                           console.log('finalizar commit')
-                           //connection.end();
-                           console.log('finalizar despues de end')
-                       })
-                   })
-               })
-   
-           })
-           //connection.end();
-       })
-       console.log('finalizar ')
-       res.status(201);
-   } catch (err) {
-       res.status(500).json({ message: 'Error al registrar los datos en la base de datos', error: err.message });
-
-   }*/
-
